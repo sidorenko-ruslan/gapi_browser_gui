@@ -7,6 +7,9 @@ enum class CommandType {
     Goto,
     ExecuteScript,
     CreatePdf,
+    PageHtml,
+    Element,
+    Click,
     Unknown
 };
 
@@ -20,6 +23,12 @@ struct ClientCommand {
         }
         else if (_type == "pdf") {
             type = CommandType::CreatePdf;
+        }
+        else if (_type == "element") {
+            type = CommandType::Element;
+        }
+        else if (_type == "page_html") {
+            type = CommandType::PageHtml;
         }
         else {
             type = CommandType::Unknown;

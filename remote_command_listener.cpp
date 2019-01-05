@@ -2,7 +2,7 @@
 #include <iostream>
 
 RemoteCommandListener::RemoteCommandListener(QObject* parent)
-    : QObject(parent), tcpServer(new QTcpServer(this)) {
+    : QObject(parent), tcpServer(new QTcpServer(this)), clientConnection(nullptr) {
     connect(tcpServer,SIGNAL(newConnection()),this,SLOT(handleConnection()));
 }
 
@@ -19,13 +19,12 @@ bool RemoteCommandListener::start(uint _portNumber) {
 }
 
 void RemoteCommandListener::handleConnection() {
-    QTcpSocket* clientConnection = tcpServer->nextPendingConnection();
+    clientConnection = tcpServer->nextPendingConnection();
     connect(clientConnection, &QAbstractSocket::disconnected, clientConnection, &QObject::deleteLater);
     connect(clientConnection, &QAbstractSocket::readyRead, this, &RemoteCommandListener::readCommand);
 }
 
 void RemoteCommandListener::readCommand() {
-    QTcpSocket* clientConnection = static_cast<QTcpSocket*>(sender());
     QJsonDocument d = QJsonDocument::fromJson(clientConnection->readAll());
     QString command = d.object().value("command").toString();
     QString commandData = d.object().value("command_data").toString();
@@ -33,8 +32,12 @@ void RemoteCommandListener::readCommand() {
     qDebug() << "received command: " << command;
     qDebug() << "received command data: " << commandData;
     emit commandReceived(ClientCommand(command,commandData));
+}
 
-    clientConnection->write("success\r\n");
+void RemoteCommandListener::sendReply(const QString &replyData) {
+    QString data = replyData + "\r\n";
+    QByteArray a = data.toUtf8();
+    clientConnection->write(a.data());
     clientConnection->waitForBytesWritten();
     clientConnection->close();
     clientConnection->disconnectFromHost();

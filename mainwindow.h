@@ -33,14 +33,19 @@ signals:
 class MainWindow : public QMainWindow, public Ui_MainWindow
 {
     Q_OBJECT
+
+    enum class ScriptType {
+        Custom,
+        Element,
+        Click
+    };
+
 public:
     explicit MainWindow(const QUrl &url);
     bool startServer(uint _portNumber);
     ~MainWindow();
-
-private:
-    bool containsCookie(const QNetworkCookie &cookie);
-
+signals:
+    void commandCompleted(const QString& data);
 private slots:
     void handleCookieAdded(const QNetworkCookie &cookie);
     void handleDeleteAllClicked();
@@ -48,20 +53,23 @@ private slots:
     void handleUrlClicked();
     void executeCommand(const ClientCommand& command);
 
+    void finishLoading(bool ok);
+
 private:
+    bool containsCookie(const QNetworkCookie &cookie);
     // Browser commands list
     void gotoPage(const QString& commandData);
     void createPdf(const QString& commandData);
-    void executeScript(const QString& commandData);
+    void executeScript(const QString& commandData, ScriptType scriptType);
     // --------------------
-
-    void injectJQuery();
 
 
     QWebEngineCookieStore *m_store;
     QVector<QNetworkCookie> m_cookies;
     QVBoxLayout *m_layout;
     RemoteCommandListener* commandListener;
+
+    QString jQuery;
 };
 
 #endif // MAINWINDOW_H

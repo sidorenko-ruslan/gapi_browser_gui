@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QUrl>
+#include <QDir>
 #include <iostream>
 
 int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication a(argc, argv);
+    QDir::setCurrent(qApp->applicationDirPath());
     QCoreApplication::setApplicationName("gap browser gui");
     QCoreApplication::setApplicationVersion("0.0.1");
 

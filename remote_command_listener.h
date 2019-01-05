@@ -18,9 +18,11 @@ signals:
 private slots:
     void handleConnection();
     void readCommand();
+    void sendReply(const QString& replyData);
 
 private:
     QTcpServer* tcpServer;
+    QTcpSocket* clientConnection;
 };
 
 #endif // REMOTE_COMMAND_LISTENER_H

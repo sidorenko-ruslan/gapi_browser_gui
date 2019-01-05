@@ -63,7 +63,19 @@ void CookieWidget::setHighlighted(bool enabled) {
 MainWindow::MainWindow(const QUrl &url) :
     QMainWindow(), m_store(nullptr), m_layout(new QVBoxLayout),
     commandListener(new RemoteCommandListener(this)) {
+    setAttribute(Qt::WA_DeleteOnClose, true);
+
+    QFile file;
+    file.setFileName(":/jquery.min.js");
+    file.open(QIODevice::ReadOnly);
+    jQuery = file.readAll();
+    jQuery.append("\nvar qt = { 'jQuery': jQuery.noConflict(true) };");
+    file.close();
+
+    connect(webView,SIGNAL(loadFinished(bool)),this,SLOT(finishLoading()));
     connect(commandListener,SIGNAL(commandReceived(ClientCommand)),this,SLOT(executeCommand(ClientCommand)));
+    connect(this,SIGNAL(commandCompleted(QString)),commandListener,SLOT(sendReply(QString)));
+
     setupUi(this);
     m_urlLineEdit->setText(url.toString());
 
@@ -88,7 +100,7 @@ MainWindow::MainWindow(const QUrl &url) :
     m_store = webView->page()->profile()->cookieStore();
     connect(m_store, &QWebEngineCookieStore::cookieAdded, this, &MainWindow::handleCookieAdded);
     m_store->loadAllCookies();
-    webView->page()->load(url);
+    //webView->page()->load(url);
 }
 
 bool MainWindow::startServer(uint _portNumber) {
@@ -159,10 +171,19 @@ void MainWindow::executeCommand(const ClientCommand& command) {
     switch (command.type) {
         case CommandType::Goto: {
             gotoPage(command.data);
+            emit commandCompleted("successs");
             break;
         }
         case CommandType::ExecuteScript: {
-            executeScript(command.data);
+            executeScript(command.data, ScriptType::Custom);
+            break;
+        }
+        case CommandType::Element: {
+            executeScript(command.data, ScriptType::Element);
+            break;
+        }
+        case CommandType::Click: {
+            executeScript(command.data, ScriptType::Click);
             break;
         }
         case CommandType::CreatePdf: {
@@ -178,31 +199,30 @@ void MainWindow::executeCommand(const ClientCommand& command) {
 void MainWindow::gotoPage(const QString& commandData) {
     m_urlLineEdit->setText(commandData);
     webView->page()->load(QUrl(commandData));
-    injectJQuery();
 }
 
-void MainWindow::executeScript(const QString& commandData) {
-    webView->page()->runJavaScript(/*commandData*/"$('#searchinfo').click()", 1, [this](const QVariant & v) {
-        qDebug() << "JS result: " << v;
-    });
+void MainWindow::executeScript(const QString& commandData, ScriptType scriptType) {
+    if (scriptType == ScriptType::Custom) {
+        webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
+            qDebug() << "JS result: " << v;
+        });
+    }
+    else if (scriptType == ScriptType::Element) {
+        webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
+            qDebug() << "JS result: " << v;
+        });
+    }
+    else if (scriptType == ScriptType::Click) {
+
+    }
 }
 
 void MainWindow::createPdf(const QString& commandData) {
     webView->page()->printToPdf(commandData);
 }
 
-void MainWindow::injectJQuery() {
-    QString result;
-    QFile f("./jquery-3.3.1.min.js");
-    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QString jqueryScript = QString(f.readAll());
-        webView->page()->runJavaScript(jqueryScript,1, [this](const QVariant& v) {
-            //result = v.toString();
-            qDebug() << "async res: " << v.toString();
-        });
+void MainWindow::finishLoading(bool ok) {
+    if (ok) {
+        webView->page()->runJavaScript(jQuery);
     }
-    else {
-        qDebug() << "NO JQUERY FILE!";
-    }
-    qDebug() << "RESULT: " << result;
 }
