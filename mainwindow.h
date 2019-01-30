@@ -36,24 +36,33 @@ class MainWindow : public QMainWindow, public Ui_MainWindow
 
     enum class ScriptType {
         Custom,
-        Element,
-        Click
+        ClickElement,
+        GetElementData
     };
 
 public:
-    explicit MainWindow(const QUrl &url);
+    explicit MainWindow();
     bool startServer(uint _portNumber);
     ~MainWindow();
 signals:
     void commandCompleted(const QString& data);
 private slots:
-    void handleCookieAdded(const QNetworkCookie &cookie);
+    void handleCookieAdded(const QNetworkCookie& cookie);
     void handleDeleteAllClicked();
     void handleNewClicked();
     void handleUrlClicked();
     void executeCommand(const ClientCommand& command);
 
+
     void finishLoading(bool ok);
+
+    void urlChangedHandler(const QUrl& url);
+    void selectionChangedHandler();
+    void titleChangedHandler();
+    void loadStartedHandler();
+    void loadProgressHandler(int progress);
+    void loadFinishedHandler(bool ok);
+    void pdfPrintingFinished(const QString& filePath, bool success);
 
 private:
     bool containsCookie(const QNetworkCookie &cookie);
@@ -70,6 +79,7 @@ private:
     RemoteCommandListener* commandListener;
 
     QString jQuery;
+    CommandType currentCommandType;
 };
 
 #endif // MAINWINDOW_H

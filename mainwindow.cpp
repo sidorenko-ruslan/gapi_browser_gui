@@ -4,7 +4,8 @@
 #include <QWebEngineCookieStore>
 #include <QWebEngineProfile>
 #include <QWebEnginePage>
-#include <QFile>
+#include <QtCore/QFile>
+#include <QtCore/QDir>
 
 CookieDialog::CookieDialog(const QNetworkCookie &cookie, QWidget *parent): QDialog(parent) {
     setupUi(this);
@@ -60,11 +61,11 @@ void CookieWidget::setHighlighted(bool enabled) {
     setPalette(p);
 }
 
-MainWindow::MainWindow(const QUrl &url) :
+MainWindow::MainWindow() :
     QMainWindow(), m_store(nullptr), m_layout(new QVBoxLayout),
     commandListener(new RemoteCommandListener(this)) {
     setAttribute(Qt::WA_DeleteOnClose, true);
-
+    setupUi(this);
     QFile file;
     file.setFileName(":/jquery.min.js");
     file.open(QIODevice::ReadOnly);
@@ -72,12 +73,19 @@ MainWindow::MainWindow(const QUrl &url) :
     jQuery.append("\nvar qt = { 'jQuery': jQuery.noConflict(true) };");
     file.close();
 
-    connect(webView,SIGNAL(loadFinished(bool)),this,SLOT(finishLoading()));
+    connect(webView,SIGNAL(loadFinished(bool)),this,SLOT(finishLoading(bool)));
+
+    connect(webView,SIGNAL(urlChanged(QUrl)),this,SLOT(urlChangedHandler(QUrl)));
+    connect(webView,SIGNAL(selectionChanged()),this,SLOT(selectionChangedHandler()));
+    connect(webView,SIGNAL(titleChanged(QString)),this,SLOT(titleChangedHandler()));
+    connect(webView,SIGNAL(loadStarted()),this,SLOT(loadStartedHandler()));
+    connect(webView,SIGNAL(loadProgress(int)),this,SLOT(loadProgressHandler(int)));
+    connect(webView,SIGNAL(loadFinished(bool)),this,SLOT(loadFinishedHandler(bool)));
+    connect(webView->page(), &QWebEnginePage::pdfPrintingFinished,
+                this, &MainWindow::pdfPrintingFinished);
+
     connect(commandListener,SIGNAL(commandReceived(ClientCommand)),this,SLOT(executeCommand(ClientCommand)));
     connect(this,SIGNAL(commandCompleted(QString)),commandListener,SLOT(sendReply(QString)));
-
-    setupUi(this);
-    m_urlLineEdit->setText(url.toString());
 
     m_layout->addItem(new QSpacerItem(0,0, QSizePolicy::Minimum, QSizePolicy::Expanding));
     m_layout->setContentsMargins(0, 0, 0, 0);
@@ -99,8 +107,7 @@ MainWindow::MainWindow(const QUrl &url) :
 
     m_store = webView->page()->profile()->cookieStore();
     connect(m_store, &QWebEngineCookieStore::cookieAdded, this, &MainWindow::handleCookieAdded);
-    m_store->loadAllCookies();
-    //webView->page()->load(url);
+    m_store->loadAllCookies();;
 }
 
 bool MainWindow::startServer(uint _portNumber) {
@@ -168,22 +175,34 @@ void MainWindow::handleUrlClicked() {
 ///////////////////////////////////////////////////////////////////////
 
 void MainWindow::executeCommand(const ClientCommand& command) {
+    currentCommandType = command.type;
     switch (command.type) {
         case CommandType::Goto: {
             gotoPage(command.data);
-            emit commandCompleted("successs");
             break;
         }
         case CommandType::ExecuteScript: {
             executeScript(command.data, ScriptType::Custom);
             break;
         }
-        case CommandType::Element: {
-            executeScript(command.data, ScriptType::Element);
+        case CommandType::GetElementData: {
+            executeScript(command.data, ScriptType::GetElementData);
             break;
         }
-        case CommandType::Click: {
-            executeScript(command.data, ScriptType::Click);
+        case CommandType::PageHtml: {
+            qDebug() << "start getting page html";
+            webView->page()->toHtml([this](const QVariant& res) {
+                QFile::remove(QDir::currentPath() + "/html_output.html");
+                QFile f(QDir::currentPath() + "/html_output.html");
+                f.open(QIODevice::WriteOnly);
+                f.write(res.toByteArray());
+                f.close();
+                emit commandCompleted(QDir::currentPath() + "/html_output.html");
+            });
+            break;
+        }
+        case CommandType::ClickElement: {
+            executeScript(command.data, ScriptType::ClickElement);
             break;
         }
         case CommandType::CreatePdf: {
@@ -207,22 +226,63 @@ void MainWindow::executeScript(const QString& commandData, ScriptType scriptType
             qDebug() << "JS result: " << v;
         });
     }
-    else if (scriptType == ScriptType::Element) {
+    else if (scriptType == ScriptType::GetElementData) {
         webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
             qDebug() << "JS result: " << v;
         });
     }
-    else if (scriptType == ScriptType::Click) {
-
+    else if (scriptType == ScriptType::ClickElement) {
+        webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
+            qDebug() << "JS result: " << v;
+        });
     }
 }
 
-void MainWindow::createPdf(const QString& commandData) {
-    webView->page()->printToPdf(commandData);
+void MainWindow::createPdf(const QString& /*commandData*/) {
+    QFile::remove("./pdf_output.pdf");
+    webView->page()->printToPdf(QString("./pdf_output.pdf"));
 }
-
 void MainWindow::finishLoading(bool ok) {
     if (ok) {
-        webView->page()->runJavaScript(jQuery);
+        qDebug() << "RUNNING JS JQUERY";
+        webView->page()->runJavaScript(jQuery,1,[this](const QVariant& res) {
+            qDebug() << "jquery script execute res: " << res;
+        });
+    }
+}
+
+void MainWindow::urlChangedHandler(const QUrl &url) {
+    qDebug() << "url changed handler: " + url.toString();
+}
+
+void MainWindow::selectionChangedHandler() {
+    qDebug() << "selection changed handler";
+}
+
+void MainWindow::titleChangedHandler() {
+    qDebug() << "title changed handler";
+}
+
+void MainWindow::loadStartedHandler() {
+    qDebug() << "load started handler";
+}
+
+void MainWindow::loadProgressHandler(int progress) {
+    qDebug() << "load progress handler: " << QString::number(progress);
+}
+
+void MainWindow::loadFinishedHandler(bool /*ok*/) {
+    if (currentCommandType == CommandType::Goto) {
+        emit commandCompleted("successs");
+    }
+}
+
+void MainWindow::pdfPrintingFinished(const QString &filePath, bool success) {
+    qDebug() << "print pdf finished";
+    if (success) {
+        emit commandCompleted(QDir::currentPath() + filePath);
+    }
+    else {
+        emit commandCompleted("error");
     }
 }
