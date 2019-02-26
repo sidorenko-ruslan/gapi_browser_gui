@@ -201,8 +201,8 @@ void MainWindow::executeCommand(const ClientCommand& command) {
             });
             break;
         }
-        case CommandType::ClickElement: {
-            executeScript(command.data, ScriptType::ClickElement);
+        case CommandType::PerformElementAction: {
+            executeScript(command.data, ScriptType::PerformElementAction);
             break;
         }
         case CommandType::CreatePdf: {
@@ -227,13 +227,28 @@ void MainWindow::executeScript(const QString& commandData, ScriptType scriptType
         });
     }
     else if (scriptType == ScriptType::GetElementData) {
-        webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
-            qDebug() << "JS result: " << v;
+        QString command = "qt.jQuery('" + commandData + "').attributes";
+        webView->page()->runJavaScript(command, 1, [this](const QVariant & res) {
+            qDebug() << "JS result: " << res;
+            QFile::remove(QDir::currentPath() + "/script_result.html");
+            QFile f(QDir::currentPath() + "/script_result.html");
+            f.open(QIODevice::WriteOnly);
+            f.write(res.toByteArray());
+            f.close();
+            emit commandCompleted(QDir::currentPath() + "/script_result.html");
         });
     }
-    else if (scriptType == ScriptType::ClickElement) {
-        webView->page()->runJavaScript(commandData, 1, [this](const QVariant & v) {
-            qDebug() << "JS result: " << v;
+    else if (scriptType == ScriptType::PerformElementAction) {
+        QStringList data = commandData.split(";");
+        QString command = "qt.jQuery('" + data[0] + "')." + data[1] + ";";
+        webView->page()->runJavaScript(command, 1, [this](const QVariant & res) {
+            qDebug() << "JS result: " << res;
+            QFile::remove(QDir::currentPath() + "/script_result.html");
+            QFile f(QDir::currentPath() + "/script_result.html");
+            f.open(QIODevice::WriteOnly);
+            f.write(res.toByteArray());
+            f.close();
+            emit commandCompleted(QDir::currentPath() + "/script_result.html");
         });
     }
 }

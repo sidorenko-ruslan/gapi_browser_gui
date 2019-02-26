@@ -10,7 +10,7 @@ enum class CommandType {
     Element,
     Click,
     GetElementData,
-    ClickElement,
+    PerformElementAction,
     PageHtml,
     Unknown
 };
@@ -32,8 +32,8 @@ struct ClientCommand {
         else if (_type == "get_element_data") {
             type = CommandType::GetElementData;
         }
-        else if (_type == "click_element") {
-            type = CommandType::ClickElement;
+        else if (_type == "perform_element_action") {
+            type = CommandType::PerformElementAction;
         }
         else if (_type == "page_html") {
             type = CommandType::PageHtml;

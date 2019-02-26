@@ -32,6 +32,32 @@ class GapBrowser
 		end
 	end
 
+	def get_element_data location
+		puts 'getting element data'
+		init_socket
+		@sock.write({ 'command' => 'get_element_data', 'command_data' => location }.to_json)
+		reply_data = get_reply_data
+		unless reply_data == 'error'
+			if File::exists?(reply_data)
+				puts 'complete'
+				Nokogiri::HTML(get_file_as_string(reply_data))
+			end
+		end
+	end
+
+	def perform_element_action location, action
+		puts 'performing element action'
+		init_socket
+		@sock.write({ 'command' => 'perform_element_action', 'command_data' => "#{location};#{action}" }.to_json)
+		reply_data = get_reply_data
+		unless reply_data == 'error'
+			if File::exists?(reply_data)
+				puts 'complete'
+				Nokogiri::HTML(get_file_as_string(reply_data))
+			end
+		end
+	end
+
 	private
 
 	def init_socket

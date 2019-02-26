@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Cookie Manager</string>
+   <string>Gap Browser</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -57,7 +57,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QWebEngineView" name="webView" native="true">
+        <widget class="WebView" name="webView" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>

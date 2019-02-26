@@ -28,12 +28,14 @@ RESOURCES = jquery.qrc
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    remote_command_listener.cpp
+    remote_command_listener.cpp \
+    webview.cpp
 
 HEADERS += \
         mainwindow.h \
     remote_command_listener.h \
-    global.h
+    global.h \
+    webview.h
 
 FORMS += \
         mainwindow.ui \

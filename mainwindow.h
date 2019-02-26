@@ -4,6 +4,7 @@
 #include "ui_mainwindow.h"
 #include "ui_cookiewidget.h"
 #include "ui_cookiedialog.h"
+#include "webview.h"
 #include <QNetworkCookie>
 #include <QMainWindow>
 #include "remote_command_listener.h"
@@ -36,7 +37,7 @@ class MainWindow : public QMainWindow, public Ui_MainWindow
 
     enum class ScriptType {
         Custom,
-        ClickElement,
+        PerformElementAction,
         GetElementData
     };
 
