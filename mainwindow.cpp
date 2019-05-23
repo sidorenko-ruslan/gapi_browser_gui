@@ -6,9 +6,12 @@
 #include <QWebEnginePage>
 #include <QtCore/QFile>
 #include <QtCore/QDir>
+#include <QtCore/QUrl>
+
 
 CookieDialog::CookieDialog(const QNetworkCookie &cookie, QWidget *parent): QDialog(parent) {
     setupUi(this);
+
     m_nameLineEdit->setText(cookie.name());
     m_domainLineEdit->setText(cookie.domain());
     m_valueLineEdit->setText(cookie.value());
@@ -66,6 +69,14 @@ MainWindow::MainWindow() :
     commandListener(new RemoteCommandListener(this)) {
     setAttribute(Qt::WA_DeleteOnClose, true);
     setupUi(this);
+
+    // connect(&m_webSocket, &QWebSocket::connected, this, &MainWindow::onConnected);
+    // connect(&m_webSocket, &QWebSocket::disconnected, this, &MainWindow::closed);
+
+
+
+    //m_webSocket.open(QUrl("ws://localhost:9230/devtools/page/DC6EFCA174EB0A5ABF2DDF3A5252ECDC"));
+
     QFile file;
     file.setFileName(":/jquery.min.js");
     file.open(QIODevice::ReadOnly);
@@ -108,6 +119,20 @@ MainWindow::MainWindow() :
     m_store = webView->page()->profile()->cookieStore();
     connect(m_store, &QWebEngineCookieStore::cookieAdded, this, &MainWindow::handleCookieAdded);
     m_store->loadAllCookies();;
+}
+
+void MainWindow::onConnected()
+{
+    qDebug() << "WebSocket connected";
+    //connect(&m_webSocket, &QWebSocket::textMessageReceived,
+    //        this, &MainWindow::onTextMessageReceived);
+    //m_webSocket.sendTextMessage(QStringLiteral("Hello, world!"));
+}
+
+void MainWindow::onTextMessageReceived(QString message)
+{
+    //qDebug() << "Message received:" << message;
+    //m_webSocket.close();
 }
 
 bool MainWindow::startServer(uint _portNumber) {
@@ -175,6 +200,7 @@ void MainWindow::handleUrlClicked() {
 ///////////////////////////////////////////////////////////////////////
 
 void MainWindow::executeCommand(const ClientCommand& command) {
+    isSendFinishedReply = false;
     currentCommandType = command.type;
     switch (command.type) {
         case CommandType::Goto: {
@@ -197,6 +223,7 @@ void MainWindow::executeCommand(const ClientCommand& command) {
                 f.open(QIODevice::WriteOnly);
                 f.write(res.toByteArray());
                 f.close();
+                qDebug() << "page html";
                 emit commandCompleted(QDir::currentPath() + "/html_output.html");
             });
             break;
@@ -235,6 +262,7 @@ void MainWindow::executeScript(const QString& commandData, ScriptType scriptType
             f.open(QIODevice::WriteOnly);
             f.write(res.toByteArray());
             f.close();
+            qDebug() << "get element data";
             emit commandCompleted(QDir::currentPath() + "/script_result.html");
         });
     }
@@ -248,6 +276,7 @@ void MainWindow::executeScript(const QString& commandData, ScriptType scriptType
             f.open(QIODevice::WriteOnly);
             f.write(res.toByteArray());
             f.close();
+            qDebug() << "perform element action";
             emit commandCompleted(QDir::currentPath() + "/script_result.html");
         });
     }
@@ -287,7 +316,9 @@ void MainWindow::loadProgressHandler(int progress) {
 }
 
 void MainWindow::loadFinishedHandler(bool /*ok*/) {
-    if (currentCommandType == CommandType::Goto) {
+    if (currentCommandType == CommandType::Goto && !isSendFinishedReply) {
+        isSendFinishedReply = true;
+        qDebug() << "load finished handler";
         emit commandCompleted("successs");
     }
 }

@@ -37,6 +37,7 @@ void RemoteCommandListener::readCommand() {
 void RemoteCommandListener::sendReply(const QString &replyData) {
     QString data = replyData + "\r\n";
     QByteArray a = data.toUtf8();
+
     clientConnection->write(a.data());
     clientConnection->waitForBytesWritten();
     clientConnection->close();

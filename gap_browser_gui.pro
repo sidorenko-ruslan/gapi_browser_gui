@@ -4,12 +4,15 @@
 #
 #-------------------------------------------------
 
-QT       += core gui webenginewidgets
+QT       += core gui webenginewidgets websockets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = gap_browser_gui
 TEMPLATE = app
+
+QTWEBENGINE_CHROMIUM_FLAGS="--remote-debugging-port=9230" gap_browser_gui
+QTWEBENGINE_REMOTE_DEBUGGING=9230
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -18,6 +21,8 @@ TEMPLATE = app
 DEFINES += QT_DEPRECATED_WARNINGS
 
 RESOURCES = jquery.qrc
+
+CONFIG += c++11
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -41,3 +46,9 @@ FORMS += \
         mainwindow.ui \
         cookiedialog.ui \
         cookiewidget.ui
+
+
+# Default rules for deployment.
+qnx: target.path = /tmp/$${TARGET}/bin
+else: unix:!android: target.path = /opt/$${TARGET}/bin
+!isEmpty(target.path): INSTALLS += target

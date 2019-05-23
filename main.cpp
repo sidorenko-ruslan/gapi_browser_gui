@@ -4,13 +4,27 @@
 #include <QtCore/QString>
 #include <QtCore/QCommandLineParser>
 #include <iostream>
+#include <QtGlobal>
+#include <QNetworkProxy>
 
 void initEnvVars(int port);
 
 
 int main(int argc, char *argv[]) {
+
+    QNetworkProxy proxy;
+    proxy.setType(QNetworkProxy::Socks5Proxy);
+    proxy.setHostName("us-wa.proxymesh.com");
+    proxy.setPort(31280);
+    proxy.setUser("gapcrawler");
+    proxy.setPassword("gapcrawler");
+    QNetworkProxy::setApplicationProxy(proxy);
+
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
+
+
+
     QDir::setCurrent(qApp->applicationDirPath());
     QCoreApplication::setApplicationName("Gap Browser gui");
     QCoreApplication::setApplicationVersion("0.0.1");
@@ -25,7 +39,7 @@ int main(int argc, char *argv[]) {
 
     initEnvVars(port);
 
-
+    qputenv("QTWEBENGINE_REMOTE_DEBUGGING","9230");
     MainWindow w;
     if (!w.startServer(port)) {
         std::cerr << "unable to start listen server!\n";

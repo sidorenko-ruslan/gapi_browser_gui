@@ -3,6 +3,15 @@ require 'json'
 require 'byebug'
 require 'nokogiri'
 
+
+class Element
+	def initialize element_html, element_location
+		@element_data = Nokogiri::HTML.fragment(element_html)
+		@element_location = element_location
+		#@title = 
+	end
+end
+
 class GapBrowser
 	def initialize host, port
 		@host = host
@@ -40,7 +49,7 @@ class GapBrowser
 		unless reply_data == 'error'
 			if File::exists?(reply_data)
 				puts 'complete'
-				Nokogiri::HTML(get_file_as_string(reply_data))
+				Element(get_file_as_string(reply_data))
 			end
 		end
 	end

@@ -6,8 +6,10 @@
 #include "ui_cookiedialog.h"
 #include "webview.h"
 #include <QNetworkCookie>
+#include <QtWebSockets/QWebSocket>
 #include <QMainWindow>
 #include "remote_command_listener.h"
+
 
 class QWebEngineCookieStore;
 
@@ -47,12 +49,18 @@ public:
     ~MainWindow();
 signals:
     void commandCompleted(const QString& data);
+
+    void closed();
+
 private slots:
     void handleCookieAdded(const QNetworkCookie& cookie);
     void handleDeleteAllClicked();
     void handleNewClicked();
     void handleUrlClicked();
     void executeCommand(const ClientCommand& command);
+
+    void onConnected();
+    void onTextMessageReceived(QString message);
 
 
     void finishLoading(bool ok);
@@ -78,9 +86,12 @@ private:
     QVector<QNetworkCookie> m_cookies;
     QVBoxLayout *m_layout;
     RemoteCommandListener* commandListener;
+    //QWebSocket m_webSocket;
 
     QString jQuery;
     CommandType currentCommandType;
+
+    bool isSendFinishedReply;
 };
 
 #endif // MAINWINDOW_H
